@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>訂單管理系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{--bg:#fff;--bg2:#f5f5f3;--bg3:#efefec;--text:#1a1a1a;--text2:#666;--text3:#aaa;--border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.2);--radius-md:8px;--radius-lg:12px;}
+@media(prefers-color-scheme:dark){:root{--bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;--text:#f0f0f0;--text2:#aaa;--text3:#666;--border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);}}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'PingFang TC','Noto Sans TC',sans-serif;background:var(--bg3);color:var(--text);min-height:100vh;}
+.shell{max-width:720px;margin:0 auto;padding:1.25rem 1rem 3rem;}
+.app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+.app-title{font-size:20px;font-weight:500;}
+.sync-badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;}
+.sync-ok{background:#EAF3DE;color:#27500A;}
+.sync-err{background:#FCEBEB;color:#791F1F;}
+.sync-ing{background:#E6F1FB;color:#0C447C;}
+
+/* Nav */
+.nav{display:flex;gap:2px;margin-bottom:1.25rem;background:var(--bg2);border-radius:var(--radius-lg);padding:4px;overflow-x:auto;}
+.ntab{flex:1;min-width:52px;padding:6px 3px;font-size:11px;font-weight:500;color:var(--text2);border:none;background:none;cursor:pointer;border-radius:var(--radius-md);transition:all .15s;text-align:center;line-height:1.3;white-space:nowrap;}
+.ntab .ic{display:block;font-size:15px;margin-bottom:1px;}
+.ntab.active{background:var(--bg);color:var(--text);border:0.5px solid var(--border);}
+.ntab:hover:not(.active){opacity:.7;color:var(--text);}
+.section{display:none;}.section.active{display:block;}
+
+/* Cards & Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:1.25rem;}
+.stat{background:var(--bg2);border-radius:var(--radius-md);padding:.7rem .85rem;}
+.stat-l{font-size:11px;color:var(--text2);margin-bottom:4px;}
+.stat-v{font-size:19px;font-weight:500;}
+.g{color:#27500A;}.r{color:#791F1F;}.b{color:#0C447C;}
+@media(prefers-color-scheme:dark){.g{color:#9FE1CB;}.r{color:#F09595;}.b{color:#85B7EB;}}
+
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;overflow:hidden;}
+.card-top{display:flex;align-items:center;gap:10px;padding:.85rem 1rem;cursor:pointer;}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0;}
+.av0{background:#E1F5EE;color:#0F6E56;}.av1{background:#E6F1FB;color:#185FA5;}
+.av2{background:#FAECE7;color:#993C1D;}.av3{background:#EEEDFE;color:#534AB7;}.av4{background:#FBEAF0;color:#993556;}
+.card-meta{flex:1;min-width:0;}
+.card-name{font-size:14px;font-weight:500;}
+.card-sub{font-size:11px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.card-amt{font-size:14px;font-weight:500;}
+.expand{border-top:0.5px solid var(--border);padding:.75rem 1rem;display:none;}
+.expand.open{display:block;}
+.drow{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;}
+.drow span:first-child{color:var(--text2);}
+.drow span:last-child{font-weight:500;text-align:right;max-width:65%;word-break:break-word;}
+.note-box{font-size:11px;color:var(--text2);background:var(--bg2);border-radius:var(--radius-md);padding:6px 8px;margin-top:6px;line-height:1.5;}
+.act-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.act-btn{font-size:11px;padding:4px 10px;border-radius:var(--radius-md);border:0.5px solid var(--border2);background:none;cursor:pointer;color:var(--text2);}
+.act-btn.pri{background:var(--text);color:var(--bg);border-color:var(--text);}
+.act-btn.grn{background:#1D9E75;color:#fff;border-color:#1D9E75;}
+.act-btn:hover{opacity:.8;}
+
+/* Badges */
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;}
+.bs{background:#EAF3DE;color:#27500A;}.bw{background:#FAEEDA;color:#633806;}
+.br{background:#FCEBEB;color:#791F1F;}.bgr{background:#F1EFE8;color:#444;}
+.bi{background:#E6F1FB;color:#0C447C;}.bp{background:#EEEDFE;color:#3C3489;}
+
+/* Filters */
+.filter-row{display:flex;gap:5px;margin-bottom:1rem;flex-wrap:wrap;}
+.chip{font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border2);background:none;cursor:pointer;color:var(--text2);transition:all .12s;}
+.chip.active{background:var(--text);color:var(--bg);border-color:var(--text);}
+.chip:hover:not(.active){background:var(--bg2);}
+.month-group{margin-bottom:1.5rem;}
+.month-lbl{font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.month-pill{background:var(--bg2);border-radius:20px;padding:2px 8px;font-size:11px;}
+
+/* Search */
+.search-wrap{position:relative;margin-bottom:1rem;}
+.search-wrap input{padding-left:30px;}
+.sico{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;opacity:.4;}
+
+/* Forms */
+.form-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;}
+.fg{margin-bottom:10px;}
+.fl{font-size:12px;color:var(--text2);display:block;margin-bottom:3px;}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.fg2 .fg{margin-bottom:0;}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;padding:7px 10px;font-size:13px;border:0.5px solid var(--border2);border-radius:var(--radius-md);background:var(--bg);color:var(--text);}
+textarea{height:56px;resize:vertical;}
+.sub-btn{width:100%;padding:9px;font-size:13px;font-weight:500;border-radius:var(--radius-md);border:none;background:var(--text);color:var(--bg);cursor:pointer;margin-top:12px;}
+.sub-btn:hover{opacity:.85;}
+.msg-ok{font-size:12px;color:#27500A;margin-top:6px;}
+.msg-err{font-size:12px;color:#791F1F;margin-top:6px;}
+.sec-title{font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+
+/* Quick parse */
+.parse-box{background:var(--bg2);border-radius:var(--radius-md);padding:10px;margin-bottom:12px;}
+.parse-hint{font-size:11px;color:var(--text2);margin-bottom:6px;}
+.parse-box textarea{height:80px;background:var(--bg);font-size:12px;}
+.parse-btn{font-size:12px;padding:5px 12px;border-radius:var(--radius-md);border:0.5px solid var(--border2);background:var(--text);color:var(--bg);cursor:pointer;margin-top:6px;}
+
+/* Todos */
+.todo-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem;}
+.todo-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border);}
+.todo-row:last-child{border-bottom:none;}
+.todo-cb{width:16px;height:16px;flex-shrink:0;margin-top:1px;cursor:pointer;accent-color:var(--text);}
+.todo-txt{font-size:13px;flex:1;line-height:1.4;}
+.todo-txt.done{text-decoration:line-through;color:var(--text3);}
+.todo-del{font-size:11px;color:var(--text3);cursor:pointer;padding:2px 6px;border-radius:var(--radius-md);border:0.5px solid var(--border);background:none;flex-shrink:0;}
+.todo-add{display:flex;gap:6px;margin-top:10px;}
+.todo-add input{flex:1;}
+.todo-add button{padding:7px 14px;border-radius:var(--radius-md);border:0.5px solid var(--border2);background:none;cursor:pointer;font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;}
+.bday-alert{background:#FAEEDA;border-radius:var(--radius-md);padding:8px 10px;font-size:12px;color:#633806;margin-bottom:8px;}
+
+/* Charts */
+.chart-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;margin-bottom:1rem;}
+.chart-title{font-size:13px;font-weight:500;margin-bottom:4px;}
+.chart-sub{font-size:11px;color:var(--text2);margin-bottom:1rem;}
+.tog-row{display:flex;gap:5px;margin-bottom:1rem;}
+.tog{font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid var(--border2);background:none;cursor:pointer;color:var(--text2);}
+.tog.active{background:var(--text);color:var(--bg);border-color:var(--text);}
+.growth-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:1rem;}
+.growth-card{background:var(--bg2);border-radius:var(--radius-md);padding:.6rem .7rem;}
+.growth-month{font-size:10px;color:var(--text2);margin-bottom:3px;}
+.growth-amt{font-size:13px;font-weight:500;margin-bottom:3px;}
+.growth-badge{font-size:10px;font-weight:500;display:inline-block;padding:1px 6px;border-radius:20px;}
+.up{background:#EAF3DE;color:#27500A;}.down{background:#FCEBEB;color:#791F1F;}.neu{background:#F1EFE8;color:#444;}
+.legend{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+.leg-dot{width:10px;height:10px;border-radius:2px;}
+.insight-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:1rem;}
+.insight{background:var(--bg2);border-radius:var(--radius-md);padding:.7rem .9rem;}
+.insight-l{font-size:11px;color:var(--text2);margin-bottom:3px;}
+.insight-v{font-size:13px;font-weight:500;}
+
+/* Products */
+.prod-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border);}
+.prod-row:last-child{border-bottom:none;}
+.prod-rank{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;}
+.pr1{background:#FAEEDA;color:#633806;}.pr2{background:#F1EFE8;color:#444;}.pr3{background:#FAECE7;color:#993C1D;}.prn{background:var(--bg2);color:var(--text2);}
+.prod-bar-bg{flex:1;height:5px;background:var(--bg2);border-radius:3px;}
+.prod-bar{height:5px;border-radius:3px;background:#378ADD;}
+
+/* Long-term */
+.lc-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:.9rem 1rem;margin-bottom:8px;}
+.lc-coupon{background:linear-gradient(135deg,#1D9E75,#0F6E56);border-radius:var(--radius-md);padding:.75rem 1rem;color:#fff;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.prog-bg{height:8px;background:var(--bg2);border-radius:4px;margin:8px 0 4px;}
+.prog-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#1D9E75,#2BC08C);}
+.lc-rule{font-size:11px;color:var(--text2);background:var(--bg2);border-radius:var(--radius-md);padding:8px 10px;line-height:1.7;}
+
+/* Member */
+.mbr-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:.9rem 1rem;margin-bottom:8px;}
+.mbr-bar-bg{height:5px;background:var(--bg2);border-radius:3px;margin:6px 0 2px;}
+.mbr-bar{height:5px;border-radius:3px;background:#378ADD;}
+
+/* Promo */
+.promo-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:.9rem 1rem;margin-bottom:8px;}
+.promo-bg{height:6px;background:var(--bg2);border-radius:3px;margin:8px 0 4px;}
+.promo-fill{height:6px;border-radius:3px;transition:width .3s;}
+
+/* LINE export */
+.line-out{background:var(--bg2);border-radius:var(--radius-md);padding:10px;font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word;margin-top:8px;font-family:monospace;}
+.copy-btn{font-size:12px;padding:5px 12px;border-radius:var(--radius-md);border:0.5px solid var(--border2);background:none;cursor:pointer;color:var(--text);margin-top:6px;}
+.copy-btn:hover{background:var(--bg2);}
+
+/* Customer */
+.cust-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:.9rem 1rem;margin-bottom:8px;}
+.cust-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0;}
+.cs{background:var(--bg2);border-radius:var(--radius-md);padding:6px 8px;text-align:center;}
+.cs-l{font-size:10px;color:var(--text2);margin-bottom:2px;}
+.cs-v{font-size:14px;font-weight:500;}
+
+/* Installment */
+.inst-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:.9rem 1rem;margin-bottom:8px;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--bg);border-radius:var(--radius-lg);padding:1.25rem;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:15px;font-weight:500;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;}
+.modal-close{font-size:20px;cursor:pointer;color:var(--text2);border:none;background:none;line-height:1;padding:0 4px;}
+.modal-footer{display:flex;gap:8px;margin-top:14px;justify-content:space-between;align-items:center;}
+.del-btn{font-size:12px;padding:7px 14px;border-radius:var(--radius-md);border:0.5px solid #E24B4A;background:none;color:#E24B4A;cursor:pointer;}
+.del-btn:hover{background:#FCEBEB;}
+.save-btn{font-size:12px;padding:7px 16px;border-radius:var(--radius-md);border:none;background:var(--text);color:var(--bg);cursor:pointer;font-weight:500;}
+
+
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .fg2{grid-template-columns:1fr;}
+  .insight-row{grid-template-columns:1fr;}
+  .growth-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .ntab{font-size:10px;padding:5px 2px;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="app-header">
+    <div class="app-title">📋 訂單管理系統</div>
+    <span class="sync-badge sync-ing" id="syncBadge">連線中…</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="showTab('orders',this)"><span class="ic">📋</span>訂單</button>
+    <button class="ntab" onclick="showTab('trend',this)"><span class="ic">📈</span>趨勢</button>
+    <button class="ntab" onclick="showTab('products',this)"><span class="ic">📦</span>產品</button>
+    <button class="ntab" onclick="showTab('customers',this)"><span class="ic">👤</span>客戶</button>
+    <button class="ntab" onclick="showTab('custprofile',this)"><span class="ic">📁</span>資料庫</button>
+    <button class="ntab" onclick="showTab('members',this)"><span class="ic">📊</span>業績</button>
+    <button class="ntab" onclick="showTab('longterm',this)"><span class="ic">🔄</span>長客</button>
+    <button class="ntab" onclick="showTab('installments',this)"><span class="ic">💳</span>分期</button>
+    <button class="ntab" onclick="showTab('promo',this)"><span class="ic">🎁</span>湊單</button>
+    <button class="ntab" onclick="showTab('todos',this)"><span class="ic">✅</span>備忘</button>
+    <button class="ntab" onclick="showTab('add',this)"><span class="ic">＋</span>新增</button>
+  </div>
+
+  <!-- 訂單 -->
+  <div id="orders" class="section active">
+    <div class="stats-grid">
+      <div class="stat"><div class="stat-l">總筆數</div><div class="stat-v" id="s-total">—</div></div>
+      <div class="stat"><div class="stat-l">總金額</div><div class="stat-v" id="s-amt">—</div></div>
+      <div class="stat"><div class="stat-l">已收款</div><div class="stat-v g" id="s-paid">—</div></div>
+      <div class="stat"><div class="stat-l">未付款</div><div class="stat-v r" id="s-unpaid">—</div></div>
+    </div>
+    <div class="filter-row" id="monthFilters"></div>
+    <div id="orderList"></div>
+  </div>
+
+  <!-- 趨勢 -->
+  <div id="trend" class="section">
+    <div class="stats-grid" style="margin-bottom:1.5rem;">
+      <div class="stat"><div class="stat-l">記錄期間</div><div class="stat-v">5 個月</div></div>
+      <div class="stat"><div class="stat-l">總業績（含長客）</div><div class="stat-v b">$91,575</div></div>
+      <div class="stat"><div class="stat-l">最高月份</div><div class="stat-v g">1 月</div></div>
+      <div class="stat"><div class="stat-l">長客月固定</div><div class="stat-v g">$3,500</div></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">每月業績趨勢</div>
+      <div class="chart-sub">點擊切換維度</div>
+      <div class="tog-row">
+        <button class="tog active" onclick="switchView('amt',this)">業績金額</button>
+        <button class="tog" onclick="switchView('count',this)">訂單數</button>
+        <button class="tog" onclick="switchView('avg',this)">平均客單價</button>
+      </div>
+      <div style="position:relative;width:100%;height:260px;"><canvas id="mainChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">月份成長分析</div>
+      <div class="chart-sub">相較上月變化（含長客）</div>
+      <div class="growth-grid" id="growthGrid"></div>
+      <div style="position:relative;width:100%;height:170px;"><canvas id="growthChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">下單會員業績分佈</div>
+      <div class="legend" id="memberLegend"></div>
+      <div style="position:relative;width:100%;height:200px;"><canvas id="memberChart"></canvas></div>
+    </div>
+    <div class="insight-row">
+      <div class="insight"><div class="insight-l">最高單筆</div><div class="insight-v">陳雅鈴 $33,800</div></div>
+      <div class="insight"><div class="insight-l">最活躍月</div><div class="insight-v">1 月（8 筆）</div></div>
+      <div class="insight"><div class="insight-l">平均客單價</div><div class="insight-v">$5,687</div></div>
+      <div class="insight"><div class="insight-l">長客月固定</div><div class="insight-v">$3,500／月</div></div>
+    </div>
+  </div>
+
+  <!-- 產品排行 -->
+  <div id="products" class="section">
+    <div class="chart-card">
+      <div class="chart-title">產品銷售排行</div>
+      <div class="chart-sub">依銷售金額排序</div>
+      <div id="prodList"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">品項銷售佔比</div>
+      <div style="position:relative;width:100%;height:220px;"><canvas id="prodChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 客戶 -->
+  <div id="customers" class="section">
+    <div class="search-wrap">
+      <svg class="sico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4"/><path d="M11 11l3 3"/></svg>
+      <input type="text" id="custSearch" placeholder="搜尋客戶姓名…" oninput="renderCustomers()">
+    </div>
+    <div id="customerList"></div>
+  </div>
+
+  <!-- 客戶資料庫 -->
+  <div id="custprofile" class="section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="search-wrap" style="flex:1;margin:0;margin-right:8px;">
+        <svg class="sico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4"/><path d="M11 11l3 3"/></svg>
+        <input type="text" id="cpSearch" placeholder="搜尋姓名、電話…" oninput="renderCustProfiles()">
+      </div>
+      <button class="act-btn pri" onclick="openCustProfileForm()">＋ 新增</button>
+    </div>
+    <div class="filter-row">
+      <button class="chip active" onclick="filterCustProfile('all',this)">全部</button>
+      <button class="chip" onclick="filterCustProfile('直銷商',this)">直銷商</button>
+      <button class="chip" onclick="filterCustProfile('生活會員',this)">生活會員</button>
+      <button class="chip" onclick="filterCustProfile('一般客戶',this)">一般客戶</button>
+    </div>
+    <div id="cpList"></div>
+
+    <!-- 新增/編輯 Modal -->
+    <div class="modal-overlay hidden" id="cpModal">
+      <div class="modal">
+        <div class="modal-title">
+          <span id="cpModalTitle">📁 新增客戶資料</span>
+          <button class="modal-close" onclick="closeCustProfileForm()">×</button>
+        </div>
+
+        <div style="font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.05em;margin-bottom:8px;">基本資料</div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">姓名 *</label><input type="text" id="cp-name" placeholder="客戶姓名"></div>
+          <div class="fg"><label class="fl">電話 *</label><input type="text" id="cp-phone" placeholder="0912-345-678"></div>
+        </div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">性別</label>
+            <select id="cp-gender"><option value="">不填</option><option>女</option><option>男</option><option>其他</option></select>
+          </div>
+          <div class="fg"><label class="fl">生日</label><input type="text" id="cp-bday" placeholder="03/15"></div>
+        </div>
+        <div class="fg"><label class="fl">身分證字號（選填）</label><input type="text" id="cp-id" placeholder="A123456789"></div>
+        <div class="fg"><label class="fl">地址</label><input type="text" id="cp-addr" placeholder="縣市區路巷弄號樓"></div>
+
+        <div style="font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.05em;margin:12px 0 8px;">會員資料</div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">是否為會員</label>
+            <select id="cp-ismember" onchange="toggleMemberType()">
+              <option value="0">一般客戶</option>
+              <option value="1">是</option>
+            </select>
+          </div>
+          <div class="fg" id="cp-membertype-wrap" style="display:none;"><label class="fl">會員身分</label>
+            <select id="cp-membertype">
+              <option>直銷商</option>
+              <option>生活會員</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">會員編號</label><input type="text" id="cp-memberno" placeholder="8xxxxxx"></div>
+          <div class="fg"><label class="fl">加入日期</label><input type="date" id="cp-joindate"></div>
+        </div>
+
+        <div style="font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.05em;margin:12px 0 8px;">消費習慣</div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">習慣付款方式</label>
+            <select id="cp-pay">
+              <option value="">不確定</option>
+              <option>貨到付款（現金）</option>
+              <option>轉帳</option>
+              <option>信用卡</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">習慣收貨方式</label>
+            <select id="cp-delivery" onchange="toggleConvStore()">
+              <option value="">不確定</option>
+              <option>宅配</option>
+              <option>超商取貨</option>
+              <option>親送</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg" id="cp-convstore-wrap" style="display:none;">
+          <label class="fl">預設超商門市</label>
+          <input type="text" id="cp-convstore" placeholder="例：7-11 竹圍東門市（岡山）">
+        </div>
+
+        <div style="font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.05em;margin:12px 0 8px;">其他</div>
+        <div class="fg"><label class="fl">備註</label><textarea id="cp-note" placeholder="備註說明…" style="height:52px;"></textarea></div>
+
+        <div class="modal-footer">
+          <button class="del-btn" id="cpDelBtn" onclick="deleteCustProfile()" style="display:none;">🗑 刪除</button>
+          <button class="save-btn" onclick="saveCustProfile()">儲存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 業績 -->
+  <div id="members" class="section"><div id="memberList"></div></div>
+
+  <!-- 長客 -->
+  <div id="longterm" class="section"><div id="longtermContent"></div></div>
+
+  <!-- 分期 -->
+  <div id="installments" class="section"><div id="installmentList"></div></div>
+
+  <!-- 湊單 -->
+  <div id="promo" class="section">
+    <!-- 試算區 -->
+    <div class="form-card" style="margin-bottom:1rem;">
+      <div style="font-size:13px;font-weight:500;margin-bottom:10px;">💰 湊單試算</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;">
+          <label class="fl">目前金額</label>
+          <input type="number" id="promoInput" placeholder="輸入金額…" oninput="renderPromo()">
+        </div>
+      </div>
+    </div>
+    <div id="promoList" style="margin-bottom:1.5rem;"></div>
+
+    <!-- 活動管理 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="sec-title" style="margin:0;">📅 特惠活動管理</div>
+      <button class="act-btn pri" onclick="openPromoForm()">＋ 新增活動</button>
+    </div>
+    <div id="promoActivities"></div>
+
+    <!-- 新增/編輯活動表單 -->
+    <div id="promoFormWrap" style="display:none;">
+      <div class="form-card" style="margin-top:12px;border:1px solid #378ADD;">
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;" id="promoFormTitle">＋ 新增特惠活動</div>
+        <div class="fg"><label class="fl">活動名稱</label><input type="text" id="pa-name" placeholder="例：母親節特惠"></div>
+        <div class="fg2">
+          <div class="fg"><label class="fl">活動開始日</label><input type="date" id="pa-start"></div>
+          <div class="fg"><label class="fl">活動結束日</label><input type="date" id="pa-end"></div>
+        </div>
+        <div id="paTiers">
+          <div class="sec-title" style="margin-bottom:6px;">門檻設定</div>
+          <div id="paTierList"></div>
+          <button class="act-btn" style="margin-top:6px;" onclick="addTierRow()">＋ 新增門檻</button>
+        </div>
+        <div class="fg" style="margin-top:10px;"><label class="fl">活動連結（選填）</label><input type="text" id="pa-link" placeholder="https://..."></div>
+        <div class="fg"><label class="fl">備註說明（選填）</label><textarea id="pa-note" placeholder="活動補充說明…" style="height:48px;"></textarea></div>
+        <div class="modal-footer" style="margin-top:10px;">
+          <button class="del-btn" id="paDelBtn" onclick="deletePromoActivity()" style="display:none;">🗑 刪除活動</button>
+          <div style="display:flex;gap:8px;">
+            <button class="act-btn" onclick="closePromoForm()">取消</button>
+            <button class="save-btn" onclick="savePromoActivity()">儲存活動</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 備忘 -->
+  <div id="todos" class="section">
+    <div id="bdayAlerts" style="margin-bottom:10px;"></div>
+    <div class="todo-card">
+      <div id="todoItems"></div>
+      <div class="todo-add">
+        <input type="text" id="todoInput" placeholder="新增備忘事項…" onkeydown="if(event.key==='Enter')addTodo()">
+        <button onclick="addTodo()">新增</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增 -->
+  <div id="add" class="section">
+    <div class="form-card">
+      <div class="sec-title" style="margin-bottom:10px;">📋 貼上 LINE 訊息自動解析</div>
+      <div class="parse-box">
+        <div class="parse-hint">把 LINE 的訂單訊息貼進來，自動填入欄位</div>
+        <textarea id="parseInput" placeholder="■ 4/28訂購：去屑洗髮精（大）*1&#10;■ 金額：$3255&#10;■ 付款方式：現金&#10;■ 下單會員：林忠緯 8615233"></textarea>
+        <button class="parse-btn" onclick="parseLine()">🪄 自動解析</button>
+      </div>
+      <div class="sec-title" style="margin-bottom:10px;">✍️ 手動填寫</div>
+      <div class="fg2">
+        <div class="fg"><label class="fl">客戶姓名</label><input type="text" id="f-name" placeholder="姓名"></div>
+        <div class="fg"><label class="fl">訂購日期</label><input type="date" id="f-date"></div>
+      </div>
+      <div class="fg"><label class="fl">品項</label><input type="text" id="f-items" placeholder="品項內容"></div>
+      <div class="fg2">
+        <div class="fg"><label class="fl">金額</label><input type="number" id="f-amt" placeholder="0"></div>
+        <div class="fg"><label class="fl">付款方式</label>
+          <select id="f-pay"><option>現金</option><option>信用卡</option><option>貨到付款</option><option>宅配到店</option><option>台中取貨</option><option>分期</option></select>
+        </div>
+      </div>
+      <div class="fg2">
+        <div class="fg"><label class="fl">下單會員</label><input type="text" id="f-member" placeholder="姓名 編號"></div>
+        <div class="fg"><label class="fl">月份</label>
+          <select id="f-month">
+            <option value="2026/1">2026/1</option><option value="2026/2">2026/2</option>
+            <option value="2026/3">2026/3</option><option value="2026/4">2026/4</option>
+            <option value="2026/5" selected>2026/5</option><option value="2026/6">2026/6</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">備註（選填）</label><textarea id="f-note" placeholder="備註說明…"></textarea></div>
+      <div class="fg2">
+        <div class="fg"><label class="fl">付款狀態</label>
+          <select id="f-paid"><option value="1">已付款</option><option value="0">未付款</option></select>
+        </div>
+        <div class="fg"><label class="fl">客戶生日（選填）</label><input type="text" id="f-bday" placeholder="例：03/15"></div>
+      </div>
+      <button class="sub-btn" onclick="addOrder()">登記訂單</button>
+      <div id="addMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span>✏️ 編輯訂單</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="fg2">
+      <div class="fg"><label class="fl">客戶姓名</label><input type="text" id="e-name"></div>
+      <div class="fg"><label class="fl">訂購日期</label><input type="date" id="e-date"></div>
+    </div>
+    <div class="fg"><label class="fl">品項</label><input type="text" id="e-items"></div>
+    <div class="fg2">
+      <div class="fg"><label class="fl">金額</label><input type="number" id="e-amt"></div>
+      <div class="fg"><label class="fl">付款方式</label>
+        <select id="e-pay"><option>現金</option><option>信用卡</option><option>貨到付款</option><option>宅配到店</option><option>台中取貨</option><option>分期</option></select>
+      </div>
+    </div>
+    <div class="fg2">
+      <div class="fg"><label class="fl">下單會員</label><input type="text" id="e-member"></div>
+      <div class="fg"><label class="fl">月份</label>
+        <select id="e-month">
+          <option value="2026/1">2026/1</option><option value="2026/2">2026/2</option>
+          <option value="2026/3">2026/3</option><option value="2026/4">2026/4</option>
+          <option value="2026/5">2026/5</option><option value="2026/6">2026/6</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">備註</label><textarea id="e-note"></textarea></div>
+    <div class="fg2">
+      <div class="fg"><label class="fl">付款狀態</label>
+        <select id="e-paid"><option value="1">已付款</option><option value="0">未付款</option></select>
+      </div>
+      <div class="fg"><label class="fl">客戶生日</label><input type="text" id="e-bday" placeholder="03/15"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="del-btn" onclick="deleteOrder()">🗑 刪除訂單</button>
+      <button class="save-btn" onclick="saveOrder()">儲存變更</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, push, onValue, update, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCA9ZHDVtLWXbxE1KdhooS64MTcpo4MQbA",
+  authDomain: "stars-sales-tracker.firebaseapp.com",
+  databaseURL: "https://stars-sales-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "stars-sales-tracker",
+  storageBucket: "stars-sales-tracker.firebasestorage.app",
+  messagingSenderId: "778597772817",
+  appId: "1:778597772817:web:1ad13a62f89e5750fa4bb0"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ── Expose DB actions globally ──
+window._db = db;
+window._ref = ref;
+window._set = set;
+window._push = push;
+window._update = update;
+window._remove = remove;
+
+// ── Listen to orders ──
+onValue(ref(db,'orders'), snap => {
+  const raw = snap.val();
+  window.orders = raw ? Object.entries(raw).map(([k,v])=>({...v, fbKey:k})) : [...defaultOrders];
+  if(!raw) seedData();
+  renderOrders(window.currentFilter||'all');
+  setSyncOk();
+}, err => { setSyncErr(); });
+
+// ── Listen to todos ──
+onValue(ref(db,'todos'), snap => {
+  const raw = snap.val();
+  window.todos = raw ? Object.entries(raw).map(([k,v])=>({...v,fbKey:k})) : [...defaultTodos];
+  if(!raw) seedTodos();
+  renderTodos();
+});
+
+function seedData(){
+  defaultOrders.forEach(o => {
+    const {fbKey, id, ...data} = o;
+    push(ref(db,'orders'), data);
+  });
+}
+function seedTodos(){
+  defaultTodos.forEach(t => {
+    const {fbKey, id, ...data} = t;
+    push(ref(db,'todos'), data);
+  });
+}
+
+function setSyncOk(){ document.getElementById('syncBadge').textContent='🟢 已同步'; document.getElementById('syncBadge').className='sync-badge sync-ok'; }
+function setSyncErr(){ document.getElementById('syncBadge').textContent='🔴 離線'; document.getElementById('syncBadge').className='sync-badge sync-err'; }
+
+// ── Global add/update/delete wired to Firebase ──
+window.fbAddOrder = function(o){
+  return push(ref(db,'orders'), o);
+};
+window.fbUpdateOrder = function(key, data){
+  return update(ref(db,`orders/${key}`), data);
+};
+window.fbAddTodo = function(t){
+  return push(ref(db,'todos'), t);
+};
+window.fbUpdateTodo = function(key, data){
+  return update(ref(db,`todos/${key}`), data);
+};
+window.fbDeleteTodo = function(key){
+  return remove(ref(db,`todos/${key}`));
+};
+
+// ── Promo Firebase ──
+onValue(ref(db,'promos'), snap=>{
+  const raw=snap.val();
+  window.promoActivities = raw ? Object.entries(raw).map(([k,v])=>({...v,fbKey:k})) : [];
+  if(document.getElementById('promo').classList.contains('active')) renderPromo();
+});
+window.fbAddPromo = function(data){ return push(ref(db,'promos'),data); };
+window.fbUpdatePromo = function(key,data){ return update(ref(db,`promos/${key}`),data); };
+
+// ── Customer Profiles Firebase ──
+onValue(ref(db,'custprofiles'), snap=>{
+  const raw=snap.val();
+  window.custProfiles = raw ? Object.entries(raw).map(([k,v])=>({...v,fbKey:k})) : [];
+  if(document.getElementById('custprofile').classList.contains('active')) renderCustProfiles();
+});
+window.fbAddCustProfile = data => push(ref(db,'custprofiles'),data);
+window.fbUpdateCustProfile = (key,data) => update(ref(db,`custprofiles/${key}`),data);
+window.fbDeleteCustProfile = key => remove(ref(db,`custprofiles/${key}`));
+</script>
+
+<script>
+// ── Default data (seeds Firebase on first load) ──
+const defaultOrders = [
+  {month:'2026/1',date:'2025-12-20',name:'孫育德',items:'長客-靈芝破壁孢子粉',amt:3500,pay:'現金',member:'詹亦貞 8767833',paid:true,note:'實際使用者：孫育德',bday:''},
+  {month:'2026/1',date:'2026-01-01',name:'洪韻捷',items:'濾芯 1 顆',amt:4860,pay:'貨到付款',member:'詹亦貞 8767833',paid:true,note:'前一代淨水器 2 台，鵝頸零件反應；滿4200贈旅行組牙膏',bday:''},
+  {month:'2026/1',date:'2026-01-05',name:'林蓉',items:'馬到成功一組（莓果/水蜜桃/葡萄柚/藍莓）+ LOC',amt:4050,pay:'宅配到店',member:'林蓉 9563979',paid:true,note:'跟忠緯湊$7800 贈多用途清潔刷',bday:''},
+  {month:'2026/1',date:'2026-01-10',name:'陳雅鈴',items:'淨水器分流（舊機換新機）',amt:33800,pay:'分期',member:'詹亦貞 8767833',paid:true,note:'分期12期每期$2800；1/17付$14000(5期)；待確認第6期起始',bday:'',installment:{total:12,paid:5,perAmt:2800}},
+  {month:'2026/1',date:'2026-01-14',name:'吳妍蓁',items:'馬到成功一組 + 水潤慕斯',amt:4700,pay:'台中取貨',member:'吳妍蓁 8471163',paid:true,note:'',bday:''},
+  {month:'2026/1',date:'2026-01-15',name:'詹織綵',items:'馬到成功一組 + 好甘萃',amt:5460,pay:'台中取貨',member:'詹亦貞 8767833',paid:true,note:'',bday:''},
+  {month:'2026/1',date:'2026-01-15',name:'吳妍蓁',items:'Xs*2（可樂/麝香葡萄）',amt:540,pay:'台中取貨',member:'吳妍蓁 8471163',paid:true,note:'',bday:''},
+  {month:'2026/1',date:'2026-01-23',name:'霍小英',items:'口紅-207奶茶',amt:750,pay:'現金',member:'詹亦貞 8767833',paid:true,note:'送馬到成功禮盒+目錄；對粉底液/粉餅有興趣',bday:''},
+  {month:'2026/3',date:'2026-03-26',name:'郭薇萱',items:'濾芯×1',amt:4860,pay:'現金',member:'詹亦貞 8767833',paid:true,note:'原編號已過期',bday:''},
+  {month:'2026/4',date:'2026-03-31',name:'吳美慧',items:'新濾芯×1',amt:4860,pay:'現金',member:'林忠緯 8615233',paid:true,note:'有自己其他團隊的編號',bday:''},
+  {month:'2026/4',date:'2026-04-03',name:'林怡玟',items:'嬰兒乳液、嬰兒沐浴、滋潤沐浴（小）',amt:1190,pay:'信用卡',member:'詹亦貞 8767833',paid:true,note:'',bday:''},
+  {month:'2026/4',date:'2026-04-04',name:'林曉蘋',items:'去屑洗髮精（大）*1、（小）*1、關鍵行動力*1',amt:3255,pay:'現金',member:'林忠緯 8615233',paid:true,note:'',bday:''},
+  {month:'2026/4',date:'2026-04-21',name:'吳仲晟',items:'強效C*1、水管*2',amt:1800,pay:'現金',member:'林忠緯 8615233',paid:false,note:'已取貨，未付款',bday:''},
+];
+const defaultTodos = [
+  {text:'確認陳雅鈴第 6 期從幾月開始繳',done:false},
+  {text:'洪韻捷鵝頸零件問題待回覆',done:false},
+  {text:'霍小英對粉底液/粉餅有興趣，記得追蹤',done:false},
+  {text:'林忠緯「狗狗的單」和「大姑姑的單」尚未登記',done:false},
+  {text:'2 月 大伯女兒牙膏 $560 確認後補登',done:false},
+];
+
+window.orders = [...defaultOrders];
+window.todos = [...defaultTodos];
+window.currentFilter = 'all';
+let orderId = 100;
+
+const avatarColors=['av0','av1','av2','av3','av4'];
+function getAv(name){ return avatarColors[(name.charCodeAt(0)||0)%5]; }
+function ini(name){ return name.slice(0,2); }
+
+const monthLabel={'2026/1':'1月','2026/2':'2月','2026/3':'3月','2026/4':'4月','2026/5':'5月','2026/6':'6月'};
+const promoTiers=[];
+const longtermPlans=[{name:'孫育德',items:'靈芝破壁孢子粉',amt:3500,member:'詹亦貞 8767833',startMonth:'2025/12',active:true}];
+
+// ── Status badge ──
+function statusBadge(o){
+  if(!o.paid) return '<span class="badge br">未付款</span>';
+  if(o.pay==='分期') return '<span class="badge bp">分期中</span>';
+  return '<span class="badge bs">已完成</span>';
+}
+
+// ── Order card ──
+function orderCardHtml(o){
+  const av=getAv(o.name);
+  const key=o.fbKey||'';
+  const editBtn=`<button class="act-btn" onclick="openEdit('${key}',event)">✏️ 編輯</button>`;
+  const payBtn=!o.paid?`<button class="act-btn pri" onclick="markPaid('${key}',event)">標記已付</button>`:'';
+  const instBtn=o.installment?`<button class="act-btn" onclick="addPeriod('${key}',event)">+ 新增一期</button>`:'';
+  const lineBtn=`<button class="act-btn grn" onclick="exportLine('${key}',event)">📤 LINE格式</button>`;
+  return `<div class="card" id="oc_${key}">
+    <div class="card-top" onclick="toggleCard('${key}')">
+      <div class="avatar ${av}">${ini(o.name)}</div>
+      <div class="card-meta">
+        <div class="card-name">${o.name}</div>
+        <div class="card-sub">${o.date||''} · ${o.items}</div>
+      </div>
+      <div class="card-right">
+        <div class="card-amt">$${(o.amt||0).toLocaleString()}</div>
+        ${statusBadge(o)}
+      </div>
+    </div>
+    <div class="expand" id="oe_${key}">
+      <div class="drow"><span>品項</span><span>${o.items}</span></div>
+      <div class="drow"><span>付款方式</span><span>${o.pay}</span></div>
+      <div class="drow"><span>下單會員</span><span>${o.member||'—'}</span></div>
+      ${o.installment?`<div class="drow"><span>分期</span><span>${o.installment.paid}/${o.installment.total}期（每期 $${o.installment.perAmt.toLocaleString()}）</span></div>`:''}
+      ${o.bday?`<div class="drow"><span>生日</span><span>🎂 ${o.bday}</span></div>`:''}
+      ${o.note?`<div class="note-box">${o.note}</div>`:''}
+      <div class="act-row">${payBtn}${instBtn}${lineBtn}${editBtn}</div>
+      <div id="line_${key}" style="display:none;">
+        <div class="line-out" id="linetext_${key}"></div>
+        <button class="copy-btn" onclick="copyLine('${key}')">複製訊息</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleCard(key){ document.getElementById('oe_'+key)?.classList.toggle('open'); }
+
+function markPaid(key,e){
+  e.stopPropagation();
+  const o=window.orders.find(x=>x.fbKey===key);
+  if(!o) return;
+  if(window.fbUpdateOrder) window.fbUpdateOrder(key,{paid:true});
+  else { o.paid=true; renderOrders(window.currentFilter); }
+}
+
+function addPeriod(key,e){
+  e.stopPropagation();
+  const o=window.orders.find(x=>x.fbKey===key);
+  if(!o||!o.installment||o.installment.paid>=o.installment.total) return;
+  const newPaid=o.installment.paid+1;
+  if(window.fbUpdateOrder) window.fbUpdateOrder(key,{'installment/paid':newPaid});
+  else { o.installment.paid=newPaid; renderOrders(window.currentFilter); }
+}
+
+function exportLine(key,e){
+  e.stopPropagation();
+  const o=window.orders.find(x=>x.fbKey===key);
+  if(!o) return;
+  const txt=`${o.name}
+■ ${o.date}訂購：${o.items}
+■ 金額：$${(o.amt||0).toLocaleString()}
+■ 付款方式：${o.pay}
+■ 下單會員：${o.member||'—'}
+■ 狀態：${o.paid?'訂購完成✅️':'待付款⚠️'}${o.note?'\n'+o.note:''}`;
+  const box=document.getElementById('line_'+key);
+  const txt_el=document.getElementById('linetext_'+key);
+  txt_el.textContent=txt;
+  box.style.display=box.style.display==='none'?'block':'none';
+}
+
+function copyLine(key){
+  const txt=document.getElementById('linetext_'+key)?.textContent;
+  if(txt) navigator.clipboard.writeText(txt).then(()=>alert('已複製！'));
+}
+
+// ── Render orders ──
+function renderOrders(filter){
+  window.currentFilter=filter;
+  const list=filter==='all'?[...window.orders]:window.orders.filter(o=>o.month===filter);
+  const months=[...new Set(list.map(o=>o.month))].sort();
+  let html='';
+  months.forEach(m=>{
+    const mo=list.filter(o=>o.month===m);
+    const msum=mo.reduce((a,o)=>a+(o.amt||0),0);
+    html+=`<div class="month-group">
+      <div class="month-lbl">2026 年 ${monthLabel[m]||m}<span class="month-pill">${mo.length}筆 · $${msum.toLocaleString()}</span></div>
+      ${mo.map(orderCardHtml).join('')}
+    </div>`;
+  });
+  document.getElementById('orderList').innerHTML=html||'<p style="color:var(--text2);font-size:13px;padding:.5rem 0;">此月份無訂單</p>';
+  const tot=list.reduce((a,o)=>a+(o.amt||0),0);
+  const paid=list.filter(o=>o.paid).reduce((a,o)=>a+(o.amt||0),0);
+  const unpaid=list.filter(o=>!o.paid).reduce((a,o)=>a+(o.amt||0),0);
+  document.getElementById('s-total').textContent=list.length;
+  document.getElementById('s-amt').textContent='$'+tot.toLocaleString();
+  document.getElementById('s-paid').textContent='$'+paid.toLocaleString();
+  document.getElementById('s-unpaid').textContent='$'+unpaid.toLocaleString();
+  renderFilters();
+}
+
+function renderFilters(){
+  const months=['all',...[...new Set(window.orders.map(o=>o.month))].sort()];
+  document.getElementById('monthFilters').innerHTML=months.map(m=>
+    `<button class="chip${window.currentFilter===m?' active':''}" onclick="filterMonth('${m}')">${m==='all'?'全部':m.replace('2026/','')+'月'}</button>`
+  ).join('');
+}
+
+function filterMonth(m){ renderOrders(m); }
+
+// ── Parse LINE format ──
+function parseLine(){
+  const raw=document.getElementById('parseInput').value;
+  const nameM=raw.match(/^([^\n■]+)/); if(nameM) document.getElementById('f-name').value=nameM[1].trim();
+  const dateM=raw.match(/(\d+\/\d+)\s*(?:訂購|來電|現場|線上)/); if(dateM) document.getElementById('f-date').value=dateM[1];
+  const itemM=raw.match(/訂購[：:](.+?)(?:\n|$)/); if(itemM) document.getElementById('f-items').value=itemM[1].trim();
+  const amtM=raw.match(/金額[：:]\$?([\d,]+)/); if(amtM) document.getElementById('f-amt').value=amtM[1].replace(/,/g,'');
+  const payM=raw.match(/付款方式[：:](.+?)(?:\n|$)/); if(payM){
+    const payEl=document.getElementById('f-pay');
+    const pv=payM[1].trim();
+    [...payEl.options].forEach(o=>{if(o.value===pv||pv.includes(o.value))payEl.value=o.value;});
+  }
+  const memM=raw.match(/下單會員[：:](.+?)(?:\n|$)/); if(memM) document.getElementById('f-member').value=memM[1].trim();
+  document.getElementById('addMsg').className='msg-ok';
+  document.getElementById('addMsg').textContent='✅ 解析完成，請確認後送出';
+}
+
+// ── Add order ──
+function addOrder(){
+  const name=document.getElementById('f-name').value.trim();
+  const items=document.getElementById('f-items').value.trim();
+  const amt=parseInt(document.getElementById('f-amt').value)||0;
+  const msg=document.getElementById('addMsg');
+  if(!name||!items||!amt){msg.className='msg-err';msg.textContent='請填寫姓名、品項和金額';return;}
+  const o={
+    month:document.getElementById('f-month').value,
+    date: document.getElementById('f-date').value || '—',
+    name, items, amt,
+    pay:document.getElementById('f-pay').value,
+    member:document.getElementById('f-member').value.trim()||'—',
+    paid:document.getElementById('f-paid').value==='1',
+    note:document.getElementById('f-note').value.trim(),
+    bday:document.getElementById('f-bday').value.trim(),
+  };
+  if(window.fbAddOrder) window.fbAddOrder(o);
+  else { window.orders.push({...o,fbKey:'local_'+(orderId++)}); renderOrders(window.currentFilter); }
+  ['f-name','f-date','f-items','f-amt','f-member','f-note','f-bday'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('parseInput').value='';
+  msg.className='msg-ok'; msg.textContent='訂單已登記並同步！';
+  setTimeout(()=>msg.textContent='',2500);
+}
+
+// ── Customers ──
+// ── Customer Profiles ──
+window.custProfiles = [];
+let editingCpKey = null;
+let cpFilter = 'all';
+
+function filterCustProfile(f, btn){
+  cpFilter = f;
+  document.querySelectorAll('#custprofile .chip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  renderCustProfiles();
+}
+
+function renderCustProfiles(){
+  const q = (document.getElementById('cpSearch').value||'').toLowerCase();
+  let list = window.custProfiles;
+  if(cpFilter !== 'all'){
+    list = list.filter(c => {
+      if(cpFilter === '一般客戶') return !c.isMember;
+      return c.isMember && c.memberType === cpFilter;
+    });
+  }
+  if(q) list = list.filter(c => (c.name||'').includes(q)||(c.phone||'').includes(q));
+
+  if(!list.length){
+    document.getElementById('cpList').innerHTML='<p style="color:var(--text2);font-size:13px;padding:.5rem 0;">尚無客戶資料，點「＋新增」開始建立</p>';
+    return;
+  }
+
+  document.getElementById('cpList').innerHTML = list.map(c=>{
+    const av = getAv(c.name||'客');
+    const ords = window.orders.filter(o=>o.name===c.name);
+    const totalAmt = ords.reduce((a,o)=>a+(o.amt||0),0);
+    const memberBadge = c.isMember
+      ? `<span class="badge ${c.memberType==='直銷商'?'bp':'bi'}">${c.memberType}</span>`
+      : `<span class="badge bgr">一般客戶</span>`;
+    const tags = [
+      c.payPref && `💳 ${c.payPref}`,
+      c.deliveryPref && `📦 ${c.deliveryPref}${c.convStore?' ('+c.convStore+')':''}`,
+    ].filter(Boolean);
+
+    return `<div class="cust-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div class="avatar ${av}" style="width:42px;height:42px;font-size:14px;">${ini(c.name||'客')}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span style="font-size:14px;font-weight:500;">${c.name||'—'}</span>
+            ${memberBadge}
+            ${c.gender?`<span style="font-size:11px;color:var(--text2);">${c.gender}</span>`:''}
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px;">
+            ${c.phone||''}${c.bday?' · 🎂'+c.bday:''}
+          </div>
+        </div>
+        <button class="act-btn" onclick="openCustProfileEdit('${c.fbKey}')">✏️</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
+        <div class="cs"><div class="cs-l">訂單數</div><div class="cs-v">${ords.length}</div></div>
+        <div class="cs"><div class="cs-l">累計消費</div><div class="cs-v" style="font-size:13px;">$${(totalAmt/1000).toFixed(1)}k</div></div>
+        <div class="cs"><div class="cs-l">加入日期</div><div class="cs-v" style="font-size:11px;">${c.joinDate||'—'}</div></div>
+      </div>
+
+      ${tags.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${tags.map(t=>`<span style="font-size:11px;background:var(--bg2);border-radius:20px;padding:2px 8px;color:var(--text2);">${t}</span>`).join('')}</div>`:''}
+
+      ${c.addr?`<div style="font-size:12px;color:var(--text2);margin-bottom:6px;">📍 ${c.addr}</div>`:''}
+      ${c.memberno?`<div style="font-size:12px;color:var(--text2);margin-bottom:6px;">🪪 編號：${c.memberno}</div>`:''}
+      ${c.note?`<div class="note-box">${c.note}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openCustProfileForm(){
+  editingCpKey = null;
+  document.getElementById('cpModalTitle').textContent = '📁 新增客戶資料';
+  document.getElementById('cpDelBtn').style.display = 'none';
+  ['cp-name','cp-phone','cp-id','cp-addr','cp-memberno','cp-convstore','cp-note'].forEach(id=>document.getElementById(id).value='');
+  ['cp-bday'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cp-gender').value='';
+  document.getElementById('cp-ismember').value='0';
+  document.getElementById('cp-membertype').value='直銷商';
+  document.getElementById('cp-joindate').value='';
+  document.getElementById('cp-pay').value='';
+  document.getElementById('cp-delivery').value='';
+  document.getElementById('cp-membertype-wrap').style.display='none';
+  document.getElementById('cp-convstore-wrap').style.display='none';
+  document.getElementById('cpModal').classList.remove('hidden');
+}
+
+function openCustProfileEdit(key){
+  const c = window.custProfiles.find(x=>x.fbKey===key);
+  if(!c) return;
+  editingCpKey = key;
+  document.getElementById('cpModalTitle').textContent = '✏️ 編輯客戶資料';
+  document.getElementById('cpDelBtn').style.display = 'block';
+  document.getElementById('cp-name').value = c.name||'';
+  document.getElementById('cp-phone').value = c.phone||'';
+  document.getElementById('cp-gender').value = c.gender||'';
+  document.getElementById('cp-bday').value = c.bday||'';
+  document.getElementById('cp-id').value = c.idno||'';
+  document.getElementById('cp-addr').value = c.addr||'';
+  document.getElementById('cp-ismember').value = c.isMember?'1':'0';
+  document.getElementById('cp-membertype').value = c.memberType||'直銷商';
+  document.getElementById('cp-memberno').value = c.memberno||'';
+  document.getElementById('cp-joindate').value = c.joinDate||'';
+  document.getElementById('cp-pay').value = c.payPref||'';
+  document.getElementById('cp-delivery').value = c.deliveryPref||'';
+  document.getElementById('cp-convstore').value = c.convStore||'';
+  document.getElementById('cp-note').value = c.note||'';
+  document.getElementById('cp-membertype-wrap').style.display = c.isMember?'block':'none';
+  document.getElementById('cp-convstore-wrap').style.display = c.deliveryPref==='超商取貨'?'block':'none';
+  document.getElementById('cpModal').classList.remove('hidden');
+}
+
+function closeCustProfileForm(){
+  document.getElementById('cpModal').classList.add('hidden');
+  editingCpKey = null;
+}
+
+function toggleMemberType(){
+  const v = document.getElementById('cp-ismember').value;
+  document.getElementById('cp-membertype-wrap').style.display = v==='1'?'block':'none';
+}
+
+function toggleConvStore(){
+  const v = document.getElementById('cp-delivery').value;
+  document.getElementById('cp-convstore-wrap').style.display = v==='超商取貨'?'block':'none';
+}
+
+function saveCustProfile(){
+  const name = document.getElementById('cp-name').value.trim();
+  const phone = document.getElementById('cp-phone').value.trim();
+  if(!name){ alert('請填寫客戶姓名'); return; }
+  const isMember = document.getElementById('cp-ismember').value === '1';
+  const data = {
+    name, phone,
+    gender: document.getElementById('cp-gender').value,
+    bday: document.getElementById('cp-bday').value.trim(),
+    idno: document.getElementById('cp-id').value.trim(),
+    addr: document.getElementById('cp-addr').value.trim(),
+    isMember,
+    memberType: isMember ? document.getElementById('cp-membertype').value : '',
+    memberno: document.getElementById('cp-memberno').value.trim(),
+    joinDate: document.getElementById('cp-joindate').value,
+    payPref: document.getElementById('cp-pay').value,
+    deliveryPref: document.getElementById('cp-delivery').value,
+    convStore: document.getElementById('cp-delivery').value==='超商取貨' ? document.getElementById('cp-convstore').value.trim() : '',
+    note: document.getElementById('cp-note').value.trim(),
+  };
+  if(editingCpKey){
+    if(window.fbUpdateCustProfile) window.fbUpdateCustProfile(editingCpKey, data);
+    else { const c=window.custProfiles.find(x=>x.fbKey===editingCpKey); if(c) Object.assign(c,data); renderCustProfiles(); }
+  } else {
+    if(window.fbAddCustProfile) window.fbAddCustProfile(data);
+    else { window.custProfiles.push({...data, fbKey:'local_'+Date.now()}); renderCustProfiles(); }
+  }
+  closeCustProfileForm();
+}
+
+function deleteCustProfile(){
+  if(!editingCpKey || !confirm('確定刪除此客戶資料？')) return;
+  if(window.fbDeleteCustProfile) window.fbDeleteCustProfile(editingCpKey);
+  else { window.custProfiles=window.custProfiles.filter(x=>x.fbKey!==editingCpKey); renderCustProfiles(); }
+  closeCustProfileForm();
+}
+
+document.getElementById('cpModal').addEventListener('click',function(e){ if(e.target===this) closeCustProfileForm(); });
+
+// ── Customer Orders (existing) ──
+function renderCustomers(){
+  const q=(document.getElementById('custSearch').value||'').toLowerCase();
+  const names=[...new Set(window.orders.map(o=>o.name))].filter(n=>!q||n.includes(q));
+  const html=names.map(name=>{
+    const ords=window.orders.filter(o=>o.name===name);
+    const total=ords.reduce((a,o)=>a+(o.amt||0),0);
+    const unpaid=ords.filter(o=>!o.paid).reduce((a,o)=>a+(o.amt||0),0);
+    const bday=ords.find(o=>o.bday)?.bday||'';
+    const av=getAv(name);
+    return `<div class="cust-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div class="avatar ${av}" style="width:40px;height:40px;">${ini(name)}</div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${name}${bday?` <span style="font-size:11px;">🎂${bday}</span>`:''}</div><div style="font-size:11px;color:var(--text2);">${ords.length}筆訂單</div></div>
+        ${unpaid?`<span class="badge br">欠款 $${unpaid.toLocaleString()}</span>`:'<span class="badge bs">全部結清</span>'}
+      </div>
+      <div class="cust-stats">
+        <div class="cs"><div class="cs-l">累計金額</div><div class="cs-v">$${(total/1000).toFixed(1)}k</div></div>
+        <div class="cs"><div class="cs-l">訂單數</div><div class="cs-v">${ords.length}</div></div>
+        <div class="cs"><div class="cs-l">最近訂購</div><div class="cs-v" style="font-size:12px;">${ords[ords.length-1].date||'—'}</div></div>
+      </div>
+      <div style="border-top:0.5px solid var(--border);padding-top:8px;margin-top:4px;">
+        ${ords.map(o=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--text2);"><span>${o.date||''} ${o.items.slice(0,16)}${o.items.length>16?'…':''}</span><span style="color:var(--text);font-weight:500;">$${(o.amt||0).toLocaleString()}</span></div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('customerList').innerHTML=html||'<p style="color:var(--text2);font-size:13px;">找不到客戶</p>';
+}
+
+// ── Members ──
+function renderMembers(){
+  const map={};
+  window.orders.forEach(o=>{
+    if(!o.member) return;
+    if(!map[o.member]) map[o.member]={orders:0,amt:0};
+    map[o.member].orders++; map[o.member].amt+=(o.amt||0);
+  });
+  const sorted=Object.entries(map).sort((a,b)=>b[1].amt-a[1].amt);
+  const maxAmt=sorted[0]?.[1].amt||1;
+  const rc=['r1','r2','r3'];
+  document.getElementById('memberList').innerHTML=sorted.map(([name,s],i)=>{
+    const pct=Math.round(s.amt/maxAmt*100);
+    return `<div class="mbr-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <div class="prod-rank ${rc[i]||'prn'}">${i+1}</div>
+        <div style="flex:1;font-size:14px;font-weight:500;">${name}</div>
+        <div style="font-size:14px;font-weight:500;">$${s.amt.toLocaleString()}</div>
+      </div>
+      <div class="mbr-bar-bg"><div class="mbr-bar" style="width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);">
+        <span>${s.orders}筆訂單</span><span>平均 $${Math.round(s.amt/s.orders).toLocaleString()}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Products ──
+function renderProducts(){
+  const map={};
+  window.orders.forEach(o=>{
+    const parts=o.items.split(/[、,＋+]/);
+    parts.forEach(p=>{
+      const name=p.trim().replace(/\*\d+/g,'').replace(/（[^）]*）/g,'').trim();
+      if(!name||name.length<2) return;
+      if(!map[name]) map[name]={count:0,amt:0};
+      map[name].count++; map[name].amt+=(o.amt||0);
+    });
+  });
+  const sorted=Object.entries(map).sort((a,b)=>b[1].amt-a[1].amt).slice(0,8);
+  const maxAmt=sorted[0]?.[1].amt||1;
+  const rc=['pr1','pr2','pr3'];
+  document.getElementById('prodList').innerHTML=`<div style="padding:4px 0;">`+sorted.map(([name,s],i)=>`
+    <div class="prod-row">
+      <div class="prod-rank ${rc[i]||'prn'}">${i+1}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+        <div style="font-size:11px;color:var(--text2);">出現 ${s.count} 次</div>
+      </div>
+      <div class="prod-bar-bg" style="width:80px;margin:0 10px;"><div class="prod-bar" style="width:${Math.round(s.amt/maxAmt*100)}%"></div></div>
+      <div style="font-size:13px;font-weight:500;text-align:right;min-width:60px;">$${s.amt.toLocaleString()}</div>
+    </div>`).join('')+'</div>';
+
+  const ctx=document.getElementById('prodChart').getContext('2d');
+  if(window._prodChart) window._prodChart.destroy();
+  const colors=['#378ADD','#1D9E75','#7F77DD','#D85A30','#E2A026','#C05FBD','#48B3B3','#888'];
+  window._prodChart=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:sorted.map(x=>x[0]),datasets:[{data:sorted.map(x=>x[1].amt),backgroundColor:colors.slice(0,sorted.length),borderWidth:2,borderColor:isDark?'#1c1c1e':'#fff',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'right',labels:{color:textColor,font:{size:10},boxWidth:10,padding:8}},tooltip:{callbacks:{label:c=>'$'+c.parsed.toLocaleString()}}}}
+  });
+}
+
+// ── Long-term ──
+function lcMonthsBetween(start,end){
+  const [sy,sm]=start.split('/').map(Number);
+  const [ey,em]=end.split('/').map(Number);
+  return (ey-sy)*12+(em-sm)+1;
+}
+function lcRoundInfo(p){
+  if(p<=6) return {round:1,inRound:p,remaining:6-p,couponPct:100,nextCouponAmt:3500};
+  const extra=p-6;
+  const round=Math.floor((extra-1)/6)+2;
+  const inRound=((extra-1)%6)+1;
+  return {round,inRound,remaining:6-inRound,couponPct:120,nextCouponAmt:4200};
+}
+function renderLongterm(){
+  const cur='2026/5';
+  const html=longtermPlans.map(plan=>{
+    const total=lcMonthsBetween(plan.startMonth,cur);
+    const {round,inRound,remaining,couponPct,nextCouponAmt}=lcRoundInfo(total);
+    const pct=Math.round(inRound/6*100);
+    const totalAmt=total*plan.amt;
+    const [cy,cm]=cur.split('/').map(Number);
+    const nm=cm+remaining; const nextMoStr=`${cy+Math.floor((nm-1)/12)}/${((nm-1)%12)+1}`;
+    const [sy,sm]=plan.startMonth.split('/').map(Number);
+    let histRows='';
+    for(let i=0;i<total;i++){
+      const mo=((sm-1+i)%12)+1; const yr=sy+Math.floor((sm-1+i)/12);
+      const period=i+1; const isEnd=period%6===0;
+      histRows+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--text2);"><span>${yr}/${mo}（第${period}期）${isEnd?' 🎁':''}</span><span style="color:var(--text);font-weight:500;">$${plan.amt.toLocaleString()}${i===total-1?' <span class="badge bs" style="font-size:10px;">本月</span>':''}</span></div>`;
+    }
+    const nextMo2=cm===12?1:cm+1; const nextYr2=cm===12?cy+1:cy;
+    histRows+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--text3);font-style:italic;"><span>${nextYr2}/${nextMo2}（第${total+1}期）預計自動續訂</span><span>$${plan.amt.toLocaleString()}</span></div>`;
+    const alert=remaining<=1?`<div style="background:#FAEEDA;border-radius:var(--radius-md);padding:8px 10px;font-size:12px;color:#633806;margin-bottom:10px;"><strong>⚠️ 即將期滿！</strong> 還差 ${remaining} 期，${nextMoStr} 將發放 ${couponPct}% 優惠券（$${nextCouponAmt.toLocaleString()}），請提醒客戶！</div>`:'';
+    return `
+    <div class="stats-grid" style="margin-bottom:1rem;">
+      <div class="stat"><div class="stat-l">長客數</div><div class="stat-v">${longtermPlans.filter(p=>p.active).length}</div></div>
+      <div class="stat"><div class="stat-l">月固定業績</div><div class="stat-v g">$${longtermPlans.reduce((a,p)=>a+p.amt,0).toLocaleString()}</div></div>
+      <div class="stat"><div class="stat-l">累計貢獻</div><div class="stat-v b">$${totalAmt.toLocaleString()}</div></div>
+      <div class="stat"><div class="stat-l">下輪優惠券</div><div class="stat-v">${couponPct}%</div></div>
+    </div>
+    ${alert}
+    <div class="lc-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="avatar av0" style="width:40px;height:40px;">${ini(plan.name)}</div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:500;">${plan.name} · ${plan.items}</div><div style="font-size:11px;color:var(--text2);">${plan.member} · 起訂：${plan.startMonth}</div></div>
+        <span class="badge bs">進行中</span>
+      </div>
+      <div class="lc-coupon">
+        <div><div style="font-size:11px;opacity:.85;margin-bottom:3px;">第${round}輪期滿優惠券（${nextMoStr} 預計）</div><div style="font-size:18px;font-weight:500;">${couponPct}% · $${nextCouponAmt.toLocaleString()}</div></div>
+        <div style="font-size:24px;opacity:.6;">🎁</div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:5px;"><span>第${round}輪 · 第${inRound}/6期</span><span>還差${remaining}期期滿</span></div>
+        <div class="prog-bg"><div class="prog-bar" style="width:${pct}%"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;">${[1,2,3,4,5,6].map(n=>`<span style="font-size:14px;color:${n<=inRound?'#1D9E75':'var(--text3)'};">●</span>`).join('')}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0;">
+        <div class="cs"><div class="cs-l">目前期數</div><div class="cs-v">第${total}期</div></div>
+        <div class="cs"><div class="cs-l">每月金額</div><div class="cs-v">$${plan.amt.toLocaleString()}</div></div>
+        <div class="cs"><div class="cs-l">累計金額</div><div class="cs-v">$${totalAmt.toLocaleString()}</div></div>
+      </div>
+      <div class="lc-rule">
+        <strong>長客計畫規則</strong><br>
+        · 第1輪（1–6期）期滿 → <strong>100%</strong> 優惠券（$3,500）<br>
+        · 第2輪起（每滿6期）→ <strong>120%</strong> 優惠券（$4,200）<br>
+        · 系統自動續訂，終止後需從第1期重新計算
+      </div>
+      <div style="border-top:0.5px solid var(--border);padding-top:8px;margin-top:10px;">
+        <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:6px;">訂購歷程</div>
+        ${histRows}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('longtermContent').innerHTML=html;
+}
+
+// ── Installments ──
+function renderInstallments(){
+  const inst=window.orders.filter(o=>o.installment);
+  if(!inst.length){document.getElementById('installmentList').innerHTML='<p style="color:var(--text2);font-size:13px;">目前無分期訂單</p>';return;}
+  document.getElementById('installmentList').innerHTML=inst.map(o=>{
+    const {total,paid,perAmt}=o.installment;
+    const pct=Math.round(paid/total*100);
+    return `<div class="inst-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div><div style="font-size:14px;font-weight:500;">${o.name}</div><div style="font-size:11px;color:var(--text2);">${o.date||''}</div></div>
+        <span class="badge bp">${paid}／${total}期</span>
+      </div>
+      <div class="prog-bg" style="background:var(--bg2);"><div style="height:8px;border-radius:4px;background:#185FA5;width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:8px;">
+        <span>已繳 $${(paid*perAmt).toLocaleString()}（${pct}%）</span><span>尚餘 $${((total-paid)*perAmt).toLocaleString()}</span>
+      </div>
+      <button class="act-btn" onclick="addPeriod('${o.fbKey||''}',{stopPropagation:function(){}})">+ 新增一期</button>
+    </div>`;
+  }).join('');
+}
+
+// ── Promo Activities ──
+window.promoActivities = [];
+let editingPromoKey = null;
+let tierRowCount = 0;
+
+function renderPromo(){
+  const cur = parseInt(document.getElementById('promoInput').value)||0;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const active = window.promoActivities.filter(a=>{
+    if(!a.endDate) return true;
+    return new Date(a.endDate) >= today;
+  });
+
+  if(!active.length){
+    document.getElementById('promoList').innerHTML = cur > 0
+      ? '<p style="color:var(--text2);font-size:13px;">目前無進行中的特惠活動</p>' : '';
+    renderPromoActivities();
+    return;
+  }
+
+  document.getElementById('promoList').innerHTML = active.map(a=>{
+    const tiers = a.tiers || [];
+    if(!tiers.length) return '';
+    const tiersHtml = tiers.map(t=>{
+      const reached = cur >= t.amt;
+      const pct = Math.min(100, Math.round(cur/t.amt*100));
+      const diff = t.amt - cur;
+      return `<div style="margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div><div style="font-size:13px;font-weight:500;">滿 $${Number(t.amt).toLocaleString()}</div><div style="font-size:12px;color:var(--text2);">贈 ${t.gift}</div></div>
+          ${reached?'<span class="badge bs">✓ 達標</span>':`<span class="badge bw">差 $${diff.toLocaleString()}</span>`}
+        </div>
+        <div class="promo-bg"><div class="promo-fill" style="width:${pct}%;background:${reached?'#1D9E75':'#378ADD'};"></div></div>
+        <div style="font-size:11px;color:var(--text2);">${pct}%${reached?' — 達標！':''}</div>
+      </div>`;
+    }).join('');
+
+    const daysLeft = a.endDate ? Math.ceil((new Date(a.endDate)-today)/(1000*60*60*24)) : null;
+    const deadlineBadge = daysLeft !== null
+      ? `<span class="badge ${daysLeft<=3?'br':'bw'}" style="font-size:10px;">${daysLeft<=0?'今天截止':`剩 ${daysLeft} 天`}</span>`
+      : '';
+
+    return `<div class="promo-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <div style="font-size:14px;font-weight:500;">${a.name||'特惠活動'}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">${a.startDate||''}${a.endDate?' → '+a.endDate:''}</div>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center;">${deadlineBadge}</div>
+      </div>
+      ${tiersHtml}
+      ${a.link?`<a href="${a.link}" target="_blank" style="font-size:11px;color:#378ADD;display:block;margin-top:6px;">🔗 活動連結</a>`:''}
+      ${a.note?`<div class="note-box" style="margin-top:6px;">${a.note}</div>`:''}
+    </div>`;
+  }).join('');
+
+  renderPromoActivities();
+}
+
+function renderPromoActivities(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const all = window.promoActivities;
+  if(!all.length){
+    document.getElementById('promoActivities').innerHTML='<p style="color:var(--text2);font-size:13px;">尚無活動，點上方「新增活動」開始設定</p>';
+    return;
+  }
+  document.getElementById('promoActivities').innerHTML = all.map(a=>{
+    const expired = a.endDate && new Date(a.endDate) < today;
+    return `<div class="promo-card" style="opacity:${expired?0.5:1};">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:13px;font-weight:500;">${a.name||'未命名活動'} ${expired?'<span class="badge bgr">已結束</span>':''}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">${a.startDate||''}${a.endDate?' → '+a.endDate:''}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">${(a.tiers||[]).map(t=>`滿$${Number(t.amt).toLocaleString()} 贈${t.gift}`).join('｜')}</div>
+        </div>
+        <button class="act-btn" onclick="openPromoEdit('${a.fbKey||''}')">✏️ 編輯</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openPromoForm(){
+  editingPromoKey = null;
+  document.getElementById('promoFormTitle').textContent = '＋ 新增特惠活動';
+  document.getElementById('pa-name').value='';
+  document.getElementById('pa-start').value='';
+  document.getElementById('pa-end').value='';
+  document.getElementById('pa-link').value='';
+  document.getElementById('pa-note').value='';
+  document.getElementById('paDelBtn').style.display='none';
+  tierRowCount=0;
+  document.getElementById('paTierList').innerHTML='';
+  addTierRow();
+  document.getElementById('promoFormWrap').style.display='block';
+  document.getElementById('promoFormWrap').scrollIntoView({behavior:'smooth'});
+}
+
+function openPromoEdit(key){
+  const a = window.promoActivities.find(x=>x.fbKey===key);
+  if(!a) return;
+  editingPromoKey = key;
+  document.getElementById('promoFormTitle').textContent = '✏️ 編輯特惠活動';
+  document.getElementById('pa-name').value = a.name||'';
+  document.getElementById('pa-start').value = a.startDate||'';
+  document.getElementById('pa-end').value = a.endDate||'';
+  document.getElementById('pa-link').value = a.link||'';
+  document.getElementById('pa-note').value = a.note||'';
+  document.getElementById('paDelBtn').style.display='block';
+  tierRowCount=0;
+  document.getElementById('paTierList').innerHTML='';
+  (a.tiers||[{amt:'',gift:''}]).forEach(t=>addTierRow(t.amt,t.gift));
+  document.getElementById('promoFormWrap').style.display='block';
+  document.getElementById('promoFormWrap').scrollIntoView({behavior:'smooth'});
+}
+
+function closePromoForm(){
+  document.getElementById('promoFormWrap').style.display='none';
+  editingPromoKey=null;
+}
+
+function addTierRow(amt='',gift=''){
+  const id=tierRowCount++;
+  const row=document.createElement('div');
+  row.id=`tier_${id}`;
+  row.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:6px;';
+  row.innerHTML=`
+    <input type="number" placeholder="門檻金額" value="${amt}" style="flex:1;padding:6px 8px;font-size:12px;border:0.5px solid var(--border2);border-radius:var(--radius-md);background:var(--bg);color:var(--text);" class="tier-amt">
+    <input type="text" placeholder="贈品說明" value="${gift}" style="flex:2;padding:6px 8px;font-size:12px;border:0.5px solid var(--border2);border-radius:var(--radius-md);background:var(--bg);color:var(--text);" class="tier-gift">
+    <button onclick="document.getElementById('tier_${id}').remove()" style="font-size:16px;color:var(--text3);border:none;background:none;cursor:pointer;padding:0 4px;">×</button>`;
+  document.getElementById('paTierList').appendChild(row);
+}
+
+function savePromoActivity(){
+  const name=document.getElementById('pa-name').value.trim();
+  if(!name){alert('請填寫活動名稱');return;}
+  const tiers=[...document.querySelectorAll('#paTierList > div')].map(row=>({
+    amt: parseInt(row.querySelector('.tier-amt').value)||0,
+    gift: row.querySelector('.tier-gift').value.trim()
+  })).filter(t=>t.amt>0&&t.gift);
+  const data={
+    name,
+    startDate:document.getElementById('pa-start').value,
+    endDate:document.getElementById('pa-end').value,
+    link:document.getElementById('pa-link').value.trim(),
+    note:document.getElementById('pa-note').value.trim(),
+    tiers,
+  };
+  if(editingPromoKey){
+    if(window.fbUpdatePromo) window.fbUpdatePromo(editingPromoKey,data);
+    else{ const a=window.promoActivities.find(x=>x.fbKey===editingPromoKey); if(a) Object.assign(a,data); renderPromo(); }
+  } else {
+    if(window.fbAddPromo) window.fbAddPromo(data);
+    else{ window.promoActivities.push({...data,fbKey:'local_'+Date.now()}); renderPromo(); }
+  }
+  closePromoForm();
+}
+
+function deletePromoActivity(){
+  if(!editingPromoKey||!confirm('確定刪除此活動？')) return;
+  if(window._remove&&window._ref&&window._db) window._remove(window._ref(window._db,`promos/${editingPromoKey}`));
+  else{ window.promoActivities=window.promoActivities.filter(x=>x.fbKey!==editingPromoKey); renderPromo(); }
+  closePromoForm();
+}
+
+// ── Todos ──
+function renderTodos(){
+  document.getElementById('todoItems').innerHTML=window.todos.map(t=>`
+    <div class="todo-row">
+      <input type="checkbox" class="todo-cb" ${t.done?'checked':''} onchange="toggleTodo('${t.fbKey||''}')">
+      <span class="todo-txt${t.done?' done':''}">${t.text}</span>
+      <button class="todo-del" onclick="deleteTodo('${t.fbKey||''}')">刪除</button>
+    </div>`).join('')||'<p style="color:var(--text2);font-size:13px;padding:8px 0;">沒有待辦事項</p>';
+
+  // Birthday alerts
+  const today=new Date(); const mm=String(today.getMonth()+1).padStart(2,'0'); const dd=String(today.getDate()).padStart(2,'0');
+  const soon=window.orders.filter(o=>o.bday).filter(o=>{
+    try{
+      const [bm,bd]=o.bday.split('/').map(Number);
+      const bdate=new Date(today.getFullYear(),bm-1,bd);
+      const diff=(bdate-today)/(1000*60*60*24);
+      return diff>=0&&diff<=14;
+    }catch{return false;}
+  });
+  document.getElementById('bdayAlerts').innerHTML=soon.map(o=>`<div class="bday-alert">🎂 <strong>${o.name}</strong> 生日快到了（${o.bday}），記得聯繫！</div>`).join('');
+}
+
+function toggleTodo(key){
+  const t=window.todos.find(x=>x.fbKey===key);
+  if(!t) return;
+  if(window.fbUpdateTodo) window.fbUpdateTodo(key,{done:!t.done});
+  else { t.done=!t.done; renderTodos(); }
+}
+function deleteTodo(key){
+  if(window.fbDeleteTodo) window.fbDeleteTodo(key);
+  else { window.todos=window.todos.filter(x=>x.fbKey!==key); renderTodos(); }
+}
+function addTodo(){
+  const i=document.getElementById('todoInput'); const txt=i.value.trim(); if(!txt) return;
+  if(window.fbAddTodo) window.fbAddTodo({text:txt,done:false});
+  else { window.todos.push({text:txt,done:false,fbKey:'local_'+Date.now()}); renderTodos(); }
+  i.value='';
+}
+
+// ── Edit/Delete Modal ──
+let editingKey = null;
+
+function openEdit(key, e){
+  e.stopPropagation();
+  const o = window.orders.find(x => x.fbKey === key);
+  if(!o) return;
+  editingKey = key;
+  document.getElementById('e-name').value = o.name||'';
+  document.getElementById('e-date').value = o.date||'';
+  document.getElementById('e-items').value = o.items||'';
+  document.getElementById('e-amt').value = o.amt||0;
+  document.getElementById('e-pay').value = o.pay||'現金';
+  document.getElementById('e-member').value = o.member||'';
+  document.getElementById('e-month').value = o.month||'2026/5';
+  document.getElementById('e-note').value = o.note||'';
+  document.getElementById('e-paid').value = o.paid ? '1' : '0';
+  document.getElementById('e-bday').value = o.bday||'';
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
+function closeModal(){
+  document.getElementById('editModal').classList.add('hidden');
+  editingKey = null;
+}
+
+function saveOrder(){
+  if(!editingKey) return;
+  const data = {
+    name: document.getElementById('e-name').value.trim(),
+    date: document.getElementById('e-date').value,
+    items: document.getElementById('e-items').value.trim(),
+    amt: parseInt(document.getElementById('e-amt').value)||0,
+    pay: document.getElementById('e-pay').value,
+    member: document.getElementById('e-member').value.trim(),
+    month: document.getElementById('e-month').value,
+    note: document.getElementById('e-note').value.trim(),
+    paid: document.getElementById('e-paid').value === '1',
+    bday: document.getElementById('e-bday').value.trim(),
+  };
+  if(window.fbUpdateOrder) window.fbUpdateOrder(editingKey, data);
+  else {
+    const o = window.orders.find(x => x.fbKey === editingKey);
+    if(o) Object.assign(o, data);
+    renderOrders(window.currentFilter);
+  }
+  closeModal();
+}
+
+function deleteOrder(){
+  if(!editingKey) return;
+  if(!confirm('確定要刪除這筆訂單嗎？')) return;
+  if(window._remove && window._ref && window._db){
+    window._remove(window._ref(window._db, `orders/${editingKey}`));
+  } else {
+    window.orders = window.orders.filter(x => x.fbKey !== editingKey);
+    renderOrders(window.currentFilter);
+  }
+  closeModal();
+}
+
+// Close modal on overlay click
+document.getElementById('editModal').addEventListener('click', function(e){
+  if(e.target === this) closeModal();
+});
+
+// ── Tab ──
+function showTab(id,btn){
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='customers') renderCustomers();
+  if(id==='custprofile') renderCustProfiles();
+  if(id==='members') renderMembers();
+  if(id==='longterm') renderLongterm();
+  if(id==='installments') renderInstallments();
+  if(id==='promo'){ renderPromo(); }
+  if(id==='todos') renderTodos();
+  if(id==='products') renderProducts();
+  if(id==='trend') buildCharts();
+}
+
+// ── Charts ──
+const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
+const textColor=isDark?'#aaa':'#666';
+const gridColor=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
+const monthData={
+  labels:['1月','2月','3月','4月','5月'],
+  amt:[61610,3500,8360,14605,3500],
+  count:[8,1,1,4,1],
+  avg:[Math.round(61610/8),3500,8360,Math.round(14605/4),3500],
+  lcAmt:[3500,3500,3500,3500,3500],
+};
+let mainChart,growthChart,memberChart;
+
+function buildCharts(){
+  buildMain('amt'); buildGrowth(); buildMember();
+}
+
+function buildMain(view){
+  const ctx=document.getElementById('mainChart').getContext('2d');
+  if(mainChart) mainChart.destroy();
+  if(view==='amt'){
+    const regular=monthData.amt.map((a,i)=>a-monthData.lcAmt[i]);
+    mainChart=new Chart(ctx,{type:'line',
+      data:{labels:monthData.labels,datasets:[
+        {label:'一般業績',data:regular,borderColor:'#378ADD',backgroundColor:isDark?'rgba(55,138,221,0.15)':'rgba(55,138,221,0.1)',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#378ADD',pointBorderColor:isDark?'#1c1c1e':'#fff',pointBorderWidth:2,tension:0.4,fill:true},
+        {label:'長客計畫',data:monthData.lcAmt,borderColor:'#1D9E75',backgroundColor:isDark?'rgba(29,158,117,0.15)':'rgba(29,158,117,0.1)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#1D9E75',pointBorderColor:isDark?'#1c1c1e':'#fff',pointBorderWidth:2,tension:0.4,fill:true,borderDash:[5,3]},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{color:textColor,font:{size:11},boxWidth:12,padding:12}},tooltip:{callbacks:{label:c=>`${c.dataset.label}：$${c.parsed.y.toLocaleString()}`}}},scales:{x:{ticks:{color:textColor,font:{size:11}},grid:{display:false},border:{display:false}},y:{ticks:{color:textColor,font:{size:11},callback:v=>'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:gridColor},border:{display:false}}}}
+    });
+  } else {
+    const data=monthData[view];
+    mainChart=new Chart(ctx,{type:'line',
+      data:{labels:monthData.labels,datasets:[{label:view==='count'?'訂單數':'平均客單價',data,borderColor:'#378ADD',backgroundColor:isDark?'rgba(55,138,221,0.12)':'rgba(55,138,221,0.08)',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#378ADD',pointBorderColor:isDark?'#1c1c1e':'#fff',pointBorderWidth:2,tension:0.4,fill:true}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>view==='count'?c.parsed.y+' 筆':'$'+c.parsed.y.toLocaleString()}}},scales:{x:{ticks:{color:textColor,font:{size:11}},grid:{display:false},border:{display:false}},y:{ticks:{color:textColor,font:{size:11},callback:v=>view==='count'?v:'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:gridColor},border:{display:false}}}}
+    });
+  }
+}
+
+function switchView(view,btn){
+  document.querySelectorAll('.tog').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); buildMain(view);
+}
+
+function buildGrowth(){
+  const amts=monthData.amt; const labels=monthData.labels;
+  const pcts=[null];
+  for(let i=1;i<amts.length;i++) pcts.push(Math.round((amts[i]-amts[i-1])/amts[i-1]*100));
+  document.getElementById('growthGrid').innerHTML=labels.map((l,i)=>{
+    if(i===0) return `<div class="growth-card"><div class="growth-month">${l}</div><div class="growth-amt">$${(amts[i]/1000).toFixed(1)}k</div><span class="growth-badge neu">基準</span></div>`;
+    const p=pcts[i]; const cls=p>0?'up':'down'; const arrow=p>0?'▲':'▼';
+    return `<div class="growth-card"><div class="growth-month">${l}</div><div class="growth-amt">$${(amts[i]/1000).toFixed(1)}k</div><span class="growth-badge ${cls}">${arrow}${Math.abs(p)}%</span></div>`;
+  }).join('');
+  const ctx=document.getElementById('growthChart').getContext('2d');
+  if(growthChart) growthChart.destroy();
+  const ptColors=pcts.slice(1).map(p=>p>=0?'#1D9E75':'#E24B4A');
+  growthChart=new Chart(ctx,{type:'line',
+    data:{labels:labels.slice(1),datasets:[{data:pcts.slice(1),borderColor:'#378ADD',backgroundColor:'transparent',borderWidth:2.5,segment:{borderColor:ctx2=>pcts.slice(1)[ctx2.p1DataIndex]>=0?'#1D9E75':'#E24B4A'},pointRadius:6,pointBackgroundColor:ctx2=>ptColors[ctx2.dataIndex],pointBorderColor:isDark?'#1c1c1e':'#fff',pointBorderWidth:2,tension:0.4,fill:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+'%'}}},scales:{x:{ticks:{color:textColor,font:{size:11}},grid:{display:false},border:{display:false}},y:{ticks:{color:textColor,font:{size:11},callback:v=>v+'%'},grid:{color:gridColor},border:{display:false}}}}
+  });
+}
+
+function buildMember(){
+  const members=[
+    {name:'詹亦貞',amt:3500+4860+4050+33800+5460+750+4860+1190},
+    {name:'林忠緯',amt:4860+3255+1800},
+    {name:'吳妍蓁',amt:4700+540},
+    {name:'林蓉',amt:4050},
+  ];
+  const colors=['#378ADD','#1D9E75','#7F77DD','#D85A30'];
+  const total=members.reduce((a,m)=>a+m.amt,0);
+  document.getElementById('memberLegend').innerHTML=members.map((m,i)=>`<span class="leg-item"><span class="leg-dot" style="background:${colors[i]}"></span>${m.name} $${(m.amt/1000).toFixed(1)}k（${Math.round(m.amt/total*100)}%）</span>`).join('');
+  const ctx=document.getElementById('memberChart').getContext('2d');
+  if(memberChart) memberChart.destroy();
+  memberChart=new Chart(ctx,{type:'doughnut',
+    data:{labels:members.map(m=>m.name),datasets:[{data:members.map(m=>m.amt),backgroundColor:colors,borderWidth:2,borderColor:isDark?'#1c1c1e':'#fff',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'$'+c.parsed.toLocaleString()+' ('+Math.round(c.parsed/total*100)+'%)'}}}}
+  });
+}
+
+// ── Init ──
+renderOrders('all');
+renderTodos();
+renderPromo();
+</script>
+</body>
+</html>
