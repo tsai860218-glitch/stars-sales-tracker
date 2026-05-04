@@ -458,7 +458,7 @@ textarea{height:56px;resize:vertical;}
       <div class="sec-title" style="margin-bottom:10px;">✍️ 手動填寫</div>
       <div class="fg2">
         <div class="fg"><label class="fl">客戶姓名</label><input type="text" id="f-name" placeholder="姓名"></div>
-        <div class="fg"><label class="fl">訂購日期</label><input type="date" id="f-date"></div>
+        <div class="fg"><label class="fl">訂購日期</label><input type="date" id="f-date" onchange="autoFillMonth()"></div>
       </div>
       <div class="fg"><label class="fl">品項</label><input type="text" id="f-items" placeholder="品項內容"></div>
       <div class="fg2">
@@ -467,16 +467,10 @@ textarea{height:56px;resize:vertical;}
           <select id="f-pay"><option>現金</option><option>信用卡</option><option>貨到付款</option><option>宅配到店</option><option>台中取貨</option><option>分期</option></select>
         </div>
       </div>
-      <div class="fg2">
-        <div class="fg"><label class="fl">下單會員</label><input type="text" id="f-member" placeholder="姓名 編號"></div>
-        <div class="fg"><label class="fl">月份</label>
-          <select id="f-month">
-            <option value="2026/1">2026/1</option><option value="2026/2">2026/2</option>
-            <option value="2026/3">2026/3</option><option value="2026/4">2026/4</option>
-            <option value="2026/5" selected>2026/5</option><option value="2026/6">2026/6</option>
-          </select>
-        </div>
+      <div class="fg">
+        <label class="fl">下單會員</label><input type="text" id="f-member" placeholder="姓名 編號">
       </div>
+      <input type="hidden" id="f-month" value="2026/5">
       <div class="fg"><label class="fl">備註（選填）</label><textarea id="f-note" placeholder="備註說明…"></textarea></div>
       <div class="fg2">
         <div class="fg"><label class="fl">付款狀態</label>
@@ -499,7 +493,7 @@ textarea{height:56px;resize:vertical;}
     </div>
     <div class="fg2">
       <div class="fg"><label class="fl">客戶姓名</label><input type="text" id="e-name"></div>
-      <div class="fg"><label class="fl">訂購日期</label><input type="date" id="e-date"></div>
+      <div class="fg"><label class="fl">訂購日期</label><input type="date" id="e-date" onchange="autoFillEditMonth()"></div>
     </div>
     <div class="fg"><label class="fl">品項</label><input type="text" id="e-items"></div>
     <div class="fg2">
@@ -508,16 +502,8 @@ textarea{height:56px;resize:vertical;}
         <select id="e-pay"><option>現金</option><option>信用卡</option><option>貨到付款</option><option>宅配到店</option><option>台中取貨</option><option>分期</option></select>
       </div>
     </div>
-    <div class="fg2">
-      <div class="fg"><label class="fl">下單會員</label><input type="text" id="e-member"></div>
-      <div class="fg"><label class="fl">月份</label>
-        <select id="e-month">
-          <option value="2026/1">2026/1</option><option value="2026/2">2026/2</option>
-          <option value="2026/3">2026/3</option><option value="2026/4">2026/4</option>
-          <option value="2026/5">2026/5</option><option value="2026/6">2026/6</option>
-        </select>
-      </div>
-    </div>
+    <div class="fg"><label class="fl">下單會員</label><input type="text" id="e-member"></div>
+    <input type="hidden" id="e-month" value="2026/5">
     <div class="fg"><label class="fl">備註</label><textarea id="e-note"></textarea></div>
     <div class="fg2">
       <div class="fg"><label class="fl">付款狀態</label>
@@ -783,11 +769,31 @@ function renderFilters(){
 
 function filterMonth(m){ renderOrders(m); }
 
+// ── Auto fill month from date ──
+function autoFillMonth(){
+  const d = document.getElementById('f-date').value;
+  if(!d) return;
+  const [y,m] = d.split('-');
+  document.getElementById('f-month').value = `${y}/${parseInt(m)}`;
+}
+
+function autoFillEditMonth(){
+  const d = document.getElementById('e-date').value;
+  if(!d) return;
+  const [y,m] = d.split('-');
+  document.getElementById('e-month').value = `${y}/${parseInt(m)}`;
+}
+
 // ── Parse LINE format ──
 function parseLine(){
   const raw=document.getElementById('parseInput').value;
   const nameM=raw.match(/^([^\n■]+)/); if(nameM) document.getElementById('f-name').value=nameM[1].trim();
-  const dateM=raw.match(/(\d+\/\d+)\s*(?:訂購|來電|現場|線上)/); if(dateM) document.getElementById('f-date').value=dateM[1];
+  const dateM=raw.match(/(\d+)\/(\d+)\s*(?:訂購|來電|現場|線上)/);
+  if(dateM){
+    const m=dateM[1].padStart(2,'0'), d=dateM[2].padStart(2,'0');
+    document.getElementById('f-date').value=`2026-${m}-${d}`;
+    autoFillMonth();
+  }
   const itemM=raw.match(/訂購[：:](.+?)(?:\n|$)/); if(itemM) document.getElementById('f-items').value=itemM[1].trim();
   const amtM=raw.match(/金額[：:]\$?([\d,]+)/); if(amtM) document.getElementById('f-amt').value=amtM[1].replace(/,/g,'');
   const payM=raw.match(/付款方式[：:](.+?)(?:\n|$)/); if(payM){
