@@ -192,7 +192,25 @@ textarea{height:56px;resize:vertical;}
 </style>
 </head>
 <body>
-<div class="shell">
+
+<!-- 密碼鎖 -->
+<div id="lockScreen" style="position:fixed;inset:0;background:var(--bg3);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.75rem;width:100%;max-width:340px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:1rem;">🔒</div>
+    <div style="font-size:18px;font-weight:500;margin-bottom:4px;">訂單管理系統</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:1.5rem;">請輸入密碼以繼續</div>
+    <input type="password" id="lockInput" placeholder="輸入密碼…"
+      style="width:100%;padding:10px 14px;font-size:15px;border:0.5px solid var(--border2);border-radius:var(--radius-md);background:var(--bg);color:var(--text);text-align:center;letter-spacing:4px;margin-bottom:10px;"
+      onkeydown="if(event.key==='Enter')checkPassword()">
+    <div id="lockErr" style="font-size:12px;color:#791F1F;height:16px;margin-bottom:8px;"></div>
+    <button onclick="checkPassword()"
+      style="width:100%;padding:10px;font-size:14px;font-weight:500;border-radius:var(--radius-md);border:none;background:var(--text);color:var(--bg);cursor:pointer;">
+      進入
+    </button>
+  </div>
+</div>
+
+<div class="shell" id="mainApp" style="display:none;">
   <div class="app-header">
     <div class="app-title">📋 訂單管理系統</div>
     <span class="sync-badge sync-ing" id="syncBadge">連線中…</span>
@@ -518,6 +536,9 @@ textarea{height:56px;resize:vertical;}
   </div>
 </div>
 
+</div>
+<!-- /mainApp -->
+
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -615,6 +636,32 @@ window.fbDeleteCustProfile = key => remove(ref(db,`custprofiles/${key}`));
 </script>
 
 <script>
+// ── 密碼鎖 ──
+const APP_PASSWORD = 'stars1314155';
+
+function checkPassword(){
+  const input = document.getElementById('lockInput').value;
+  if(input === APP_PASSWORD){
+    sessionStorage.setItem('lailo_auth','1');
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+    document.getElementById('lockInput').value='';
+  } else {
+    document.getElementById('lockErr').textContent='密碼錯誤，請再試一次';
+    document.getElementById('lockInput').value='';
+    document.getElementById('lockInput').focus();
+    setTimeout(()=>document.getElementById('lockErr').textContent='',2000);
+  }
+}
+
+// 同一瀏覽器 session 已登入則直接顯示
+(function(){
+  if(sessionStorage.getItem('lailo_auth')==='1'){
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+  }
+})();
+
 // ── Default data (seeds Firebase on first load) ──
 const defaultOrders = [
   {month:'2026/1',date:'2025-12-20',name:'孫育德',items:'長客-靈芝破壁孢子粉',amt:3500,pay:'現金',member:'詹亦貞 8767833',paid:true,note:'實際使用者：孫育德',bday:''},
